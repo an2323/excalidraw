@@ -14,6 +14,7 @@ import {
   actionToggleMidpointSnapping,
   actionToggleObjectsSnapMode,
   actionToggleSearchMenu,
+  actionToggleShowHints,
   actionToggleStats,
   actionToggleTheme,
   actionToggleZenMode,
@@ -444,20 +445,37 @@ const PreferencesToggleToolLockItem = () => {
   );
 };
 
-const PreferencesBoxSelectionModeItem = () => {
+const PreferencesSelectionModeItem = ({
+  type,
+}: {
+  type: "rectangle" | "lasso";
+}) => {
   const { t } = useI18n();
   const appState = useUIAppState();
   const setAppState = useExcalidrawSetAppState();
 
+  const isRectangle = type === "rectangle";
+  const selectionMode = isRectangle
+    ? appState.boxSelectionMode
+    : appState.lassoSelectionMode;
+
   return (
     <DropdownMenuItemContentRadio<"contain" | "overlap">
-      name="boxSelectionMode"
+      name={`${type}SelectionMode`}
       icon={emptyIcon}
-      value={appState.boxSelectionMode}
+      value={selectionMode}
       onChange={(value) => {
-        setAppState({
-          boxSelectionMode: value,
-        });
+        setAppState(
+          isRectangle
+            ? {
+                boxSelectionMode: value,
+                lassoSelectionMode: appState.lassoSelectionMode,
+              }
+            : {
+                boxSelectionMode: appState.boxSelectionMode,
+                lassoSelectionMode: value,
+              },
+        );
       }}
       choices={[
         {
@@ -472,7 +490,7 @@ const PreferencesBoxSelectionModeItem = () => {
         },
       ]}
     >
-      {t("labels.boxSelectionMode")}
+      {isRectangle ? t("labels.boxSelectionMode") : t("toolBar.lasso")}
     </DropdownMenuItemContentRadio>
   );
 };
@@ -565,13 +583,13 @@ const PreferencesToggleMidpointSnappingItem = () => {
 
 const PreferencesToggleShowHintsItem = () => {
   const { t } = useI18n();
+  const actionManager = useExcalidrawActionManager();
   const appState = useUIAppState();
-  const setAppState = useExcalidrawSetAppState();
   return (
     <DropdownMenuItemCheckbox
       checked={appState.showHints}
       onSelect={(event) => {
-        setAppState({ showHints: !appState.showHints });
+        actionManager.executeAction(actionToggleShowHints);
         event.preventDefault();
       }}
     >
@@ -672,7 +690,8 @@ export const Preferences = ({
       <DropdownMenuSub.Content className="excalidraw-main-menu-preferences-submenu">
         {children || (
           <>
-            <PreferencesBoxSelectionModeItem />
+            <PreferencesSelectionModeItem type="rectangle" />
+            <PreferencesSelectionModeItem type="lasso" />
             <PreferencesInputDeviceItem />
             <PreferencesToggleToolLockItem />
             <PreferencesToggleSnapModeItem />
@@ -692,7 +711,10 @@ export const Preferences = ({
 };
 
 Preferences.ToggleToolLock = PreferencesToggleToolLockItem;
-Preferences.BoxSelectionMode = PreferencesBoxSelectionModeItem;
+Preferences.SelectionMode = PreferencesSelectionModeItem;
+Preferences.BoxSelectionMode = () => (
+  <PreferencesSelectionModeItem type="rectangle" />
+);
 Preferences.InputDevice = PreferencesInputDeviceItem;
 Preferences.ToggleSnapMode = PreferencesToggleSnapModeItem;
 Preferences.ToggleArrowBinding = PreferencesToggleArrowBindingItem;
